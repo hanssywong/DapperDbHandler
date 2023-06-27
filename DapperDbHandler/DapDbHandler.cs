@@ -4,10 +4,10 @@ using System.Data.SqlClient;
 
 namespace DapperDbHandler
 {
-    public class DapperDbHandler
+    public class DapDbHandler
     {
         public string ConnectionString { get; }
-        public DapperDbHandler(string connectionString)
+        public DapDbHandler(string connectionString)
         {
             ConnectionString = connectionString;
         }
