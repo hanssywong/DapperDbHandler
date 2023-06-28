@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace DapperDbHandler
 {
-    public class SqlCommandContainer
+    public record SqlContainer4Dapper
     {
         public string Sql { get; }
         public object? Parameters { get; }
-        public SqlCommandContainer(string sql, object? parameters = null)
+        public SqlContainer4Dapper(string sql, object? parameters = null)
         {
             Sql = sql;
             Parameters = parameters;
