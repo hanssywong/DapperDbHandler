@@ -18,13 +18,22 @@ namespace DapperDbHandler
         }
         public async Task<ImmutableList<T>> RetrieveDataAsync<T>(string sql, object? param = null) where T : class
         {
-            // Create connection to SQL Server
-            using SqlConnection connection = new(ConnectionString);
-            // Open connection
-            await connection.OpenAsync();
-            var result = await connection.QueryAsync<T>(sql, param);
-            var list = result.ToImmutableList();
-            return list;
+            Logger?.Debug($"RetrieveDataAsync sql: {sql}");
+            try
+            {
+                // Create connection to SQL Server
+                using SqlConnection connection = new(ConnectionString);
+                // Open connection
+                await connection.OpenAsync();
+                var result = await connection.QueryAsync<T>(sql, param);
+                var list = result.ToImmutableList();
+                return list;
+            }
+            catch (Exception ex)
+            {
+                Logger?.Error(ex, $"RetrieveDataAsync sql: {sql}");
+                throw;
+            }
         }
         public async Task ExecuteSqlWithTx(ImmutableList<SqlContainer4Dapper> sqlCommands, bool doNotCommit = false)
         {
@@ -36,6 +45,8 @@ namespace DapperDbHandler
             {
                 foreach (var sqlCommand in sqlCommands)
                 {
+                    Logger?.Debug($"ExecuteSqlWithTx sql: {sqlCommand.Sql}");
+                    Logger?.Debug($"ExecuteSqlWithTx Parameters: {JsonConvert.SerializeObject(sqlCommand.Parameters)}");
                     await connection.ExecuteAsync(sqlCommand.Sql, sqlCommand.Parameters, transaction);
                     if (++cnt % 50 == 0)
                     {
@@ -55,7 +66,7 @@ namespace DapperDbHandler
             {
                 // Rollback the transaction if an error occurs  
                 await transaction.RollbackAsync();
-                Logger?.Error(ex, $"ExecuteSqlWithTx @{cnt}, {JsonConvert.SerializeObject(sqlCommands[cnt].Parameters)}");
+                Logger?.Error(ex, $"ExecuteSqlWithTx @{cnt}, sql: {sqlCommands[cnt].Sql}, Parameters: {JsonConvert.SerializeObject(sqlCommands[cnt].Parameters)}");
                 throw;
             }
         }
@@ -63,9 +74,9 @@ namespace DapperDbHandler
         {
             using var connection = new SqlConnection(ConnectionString);
             await connection.OpenAsync();
+            int cnt = 0;
             try
             {
-                int cnt = 0;
                 foreach (var sqlCommand in sqlCommands)
                 {
                     await connection.ExecuteAsync(sqlCommand.Sql, sqlCommand.Parameters);
@@ -75,8 +86,9 @@ namespace DapperDbHandler
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Logger?.Error(ex, $"ExecuteSqlWithTx @{cnt}, sql: {sqlCommands[cnt].Sql}, Parameters: {JsonConvert.SerializeObject(sqlCommands[cnt].Parameters)}");
                 throw;
             }
         }
@@ -98,10 +110,12 @@ namespace DapperDbHandler
             {
                 await transaction.RollbackAsync();
                 Logger?.Error(ex, $"{this.GetType().Name} {MethodBase.GetCurrentMethod()?.Name!} {ex.Message}, sql: {JsonConvert.SerializeObject(sqlContainer)}");
+                throw;
             }
         }
         private async Task ExecuteNonQuerySqlAsync(SqlConnection connection, SqlTransaction transaction, SqlContainer container)
         {
+            Logger?.Debug($"ExecuteNonQuerySqlAsync: {container.Sql}");
             using SqlCommand command = new(container.Sql, connection, transaction);
             foreach (var pair in container.Parameters)
             {
