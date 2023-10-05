@@ -16,7 +16,7 @@ namespace DapperDbHandler
             ConnectionString = connectionString;
             Logger = logger;
         }
-        public async Task<ImmutableList<T>> RetrieveDataAsync<T>(string sql, object? param = null) where T : class
+        public async Task<ImmutableList<T>> RetrieveDataAsync<T>(string sql, object? param = null, int? timeout = null) where T : class
         {
             Logger?.Debug($"RetrieveDataAsync sql: {sql}");
             try
@@ -25,7 +25,7 @@ namespace DapperDbHandler
                 using SqlConnection connection = new(ConnectionString);
                 // Open connection
                 await connection.OpenAsync();
-                var result = await connection.QueryAsync<T>(sql, param);
+                var result = await connection.QueryAsync<T>(sql, param, commandTimeout: timeout);
                 var list = result.ToImmutableList();
                 return list;
             }
